@@ -326,4 +326,22 @@ public class View implements ViewInterface {
     out.append("Enter Date of selling stocks\n");
   }
 
+  @Override
+  public void printInvestedAmount(Appendable out) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void printInvalidAmount(Appendable out) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void printInvestedPercentage(Appendable out) {
+    // TODO Auto-generated method stub
+    
+  }
+
 }
