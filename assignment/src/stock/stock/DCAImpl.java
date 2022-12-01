@@ -1,15 +1,18 @@
 package stock.stock;
 
-public class DCGImpl implements DCGPortfolios{
+public class DCAImpl implements DCAPortfolios {
 
     String symbol;
     float percentage;
     String date;
+
+    float quantity;
     float purchaseCost;
     float investedAmount;
 
-    public DCGImpl(String symbol, int percentage, String date, float purchaseCost, float investedAmount) {
+    public DCAImpl(String symbol, float quantity, float percentage, String date, float purchaseCost, float investedAmount) {
         this.percentage = percentage;
+        this.quantity = quantity;
         this.symbol = symbol;
         this.date = date;
         this.purchaseCost = purchaseCost;
@@ -34,6 +37,16 @@ public class DCGImpl implements DCGPortfolios{
     @Override
     public void setPercentage(float percentage) {
         this.percentage = percentage;
+    }
+
+    /**
+     * Returns the Quantity of the stock.
+     *
+     * @return an integer showing number of particular stock bought.
+     */
+    @Override
+    public float getQuantity() {
+        return this.quantity;
     }
 
     /**
@@ -63,7 +76,7 @@ public class DCGImpl implements DCGPortfolios{
      */
     @Override
     public float getPurchaseCost() {
-        return 0;
+        return this.purchaseCost;
     }
 
     /**

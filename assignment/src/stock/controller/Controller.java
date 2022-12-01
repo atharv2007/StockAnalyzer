@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.*;
 
+import stock.stock.DCAImpl;
+import stock.stock.DCAPortfolios;
 import stock.stock.StockInterface;
 import stock.stock.stockDetails;
 import stock.model.ModelInterface;
@@ -17,11 +19,14 @@ import stock.view.ViewInterface;
 public class Controller implements ControllerInterface {
 
   ArrayList<String> portfolioNames;
+  ArrayList<String> DCAportfolioNames;
   private ModelInterface model;
   private ViewInterface view;
   HashMap loadedCsv;
   final Readable in;
   final Appendable out;
+
+  private float percent;
 
   /**
    * Constructor for structure of Controller.
@@ -39,6 +44,7 @@ public class Controller implements ControllerInterface {
     this.in = in;
     this.out = out;
     portfolioNames = model.getPortfolioNames();
+    DCAportfolioNames = model.getDCAPortfolioNames();
     loadedCsv = model.loadDataFromCsv();
   }
 
@@ -133,34 +139,41 @@ public class Controller implements ControllerInterface {
           model.storeExPortfolio(portfolioName, stockList);
           break;
         }
+
         case 3: { //create dollar cost average portfolio
+          percent = 100;
+
           view.printInvestedAmount(out);
-          float investedAmount = sc.nextFloat();
+          String ia = sc.nextLine();
+          float investedAmount = Float.parseFloat(ia);
           while(investedAmount < 0){
             view.printInvalidAmount(out);
-            investedAmount = sc.nextFloat();
+            ia = sc.nextLine();
+            investedAmount = Float.parseFloat(ia);
           }
 
-          view.printTickerSymbol(out);
-          String symbol = sc.nextLine();
-          while(!model.validSymbol(symbol)){
-            view.invalidSymbol(out);
-            symbol = sc.nextLine();
-          }
-          symbol = symbol.toUpperCase();
-          float percent = 100;
+          DCAImpl stock = getDCGStock(sc,investedAmount);
+          List<DCAPortfolios> stockList = new ArrayList<DCAPortfolios>();
+          stockList.add(stock);
 
-          view.printInvestedPercentage(out);
-          
-
-          view.printDateOfStock(out);
-          String date = sc.nextLine();
-          while(!model.validDate(date)) {
-            view.printInvalidDate(out);
-            view.reEnterDate(out);
-            date = sc.nextLine();
+          view.wantToAddMoreStocks(out);
+          String input = sc.nextLine();
+          while (input.equalsIgnoreCase("y")) {
+            stock = getDCGStock(sc,investedAmount);
+            stockList.add(stock);
+            view.wantToAddMoreStocks(out);
+            input = sc.nextLine();
           }
 
+          view.printNameOfPortfolio(out);
+          String portfolioName = sc.nextLine();
+          portfolioName = checkEmpty(portfolioName, sc);
+          while (model.checkIfPortfolioFileExists(portfolioName, portfolioNames)) {
+            view.portfolioAlreadyExistsError(out);
+            portfolioName = sc.nextLine();
+          }
+
+          model.storeDCAPortfolio(portfolioName,stockList);
           break;
         }
 
@@ -194,6 +207,16 @@ public class Controller implements ControllerInterface {
         }
 
         case 6: { //display dca portfolio
+          view.displayNamesOfPortfolio(DCAportfolioNames, out);
+          view.selectPortfolio(out);
+          String input = sc.nextLine();
+          int choice = Integer.parseInt(input);
+          String portfolioName = DCAportfolioNames.get(choice - 1);
+          List<DCAPortfolios> stocks = model.displayDCAPortfolio(portfolioName);
+          for (DCAPortfolios stock : stocks) {
+            view.displayDCAStocks(stock.getSymbol(),stock.getQuantity(), stock.getDate(),
+                    stock.getPercentage(), stock.getPurchaseCost(), stock.getInvestedAmount());
+          }
           break;
         }
 
@@ -362,7 +385,7 @@ public class Controller implements ControllerInterface {
           break;
         }
 
-        case 13:
+        case 13: {
           view.enterPathToLoadCsv(out);
           String tempFileName = sc.nextLine();
 
@@ -370,7 +393,7 @@ public class Controller implements ControllerInterface {
 
           File theDir = new File(tempFileName);
           String portfolioName = tempFileName.substring(tempFileName.lastIndexOf("\\") + 1,
-              tempFileName.indexOf("."));
+                  tempFileName.indexOf("."));
           while (!theDir.exists() || portfolioNames.contains(portfolioName)) {
             view.pathDoesNotExist(out);
             tempFileName = sc.nextLine();
@@ -384,8 +407,9 @@ public class Controller implements ControllerInterface {
 
           model.storeCsv(toStore, portfolioName);
           view.loadedSuccessfully(out);
-          break;
 
+          break;
+        }
         case 14: {
           /*
           view.printNameOfPortfolio(out);
@@ -457,8 +481,67 @@ public class Controller implements ControllerInterface {
       }
     }
     while (toDo != 15);
+  }
 
+  private DCAImpl getDCGStock(Scanner sc, float investedAmount) throws IOException {
 
+    view.printTickerSymbol(out);
+    String symbol = sc.nextLine();
+    while(!model.validSymbol(symbol)){
+      view.invalidSymbol(out);
+      symbol = sc.nextLine();
+    }
+    symbol = symbol.toUpperCase();
+
+    view.printRemainderPercentage(out, percent);
+    view.printInvestedPercentage(out);
+    String p = sc.nextLine();
+    float percentage = Float.parseFloat(p);
+    while(percentage < 0 || percentage > 100){
+      view.printInvalidPercentage(out);
+      p = sc.nextLine();
+      percentage = Float.parseFloat(p);
+    }
+    percent -= percentage;
+    while(percent < 0) {
+      view.printInvalidRPercentage(out);
+      percent+= percentage;
+      p = sc.nextLine();
+      percentage = Float.parseFloat(p);
+      percent -= percentage;
+    }
+
+    view.printDateOfStock(out);
+    String date = sc.nextLine();
+    while(!model.validDate(date)) {
+      view.printInvalidDate(out);
+      view.reEnterDate(out);
+      date = sc.nextLine();
+    }
+
+    view.mentionCommission(out);
+    float percentCommission = Float.parseFloat(sc.nextLine());
+    while (model.validCommission(percentCommission)) {
+      view.invalidCommission(out);
+      percentCommission = Float.parseFloat(sc.nextLine());
+    }
+
+    String result = model.fetchUrlPrices(symbol);
+    float purchaseCost = model.getPrices(date,result);
+    while (purchaseCost == -1) {
+      view.printMarketClosed(out);
+      view.reEnterDate(out);
+      date = sc.nextLine();
+      purchaseCost = model.getPrices(date,result);
+    }
+    System.out.println(purchaseCost);
+    DecimalFormat df = new DecimalFormat("###.###");
+    df.format(purchaseCost);
+    float quantity = ((investedAmount*percentage)/100) / purchaseCost;
+    float totalInvestment = ((investedAmount*percentage)/100) ;
+    DCAImpl stock = new DCAImpl(symbol, quantity, percentage, date, purchaseCost, totalInvestment);
+
+    return stock;
   }
 
   private stockDetails getStockInput(Scanner sc) throws IOException {

@@ -1,7 +1,9 @@
 package stock.model;
 
+import stock.stock.DCAPortfolios;
 import stock.stock.StockInterface;
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.InvalidPathException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -298,4 +300,10 @@ public interface ModelInterface {
    * @return returns true if commission percentage is negative.
    */
   boolean validCommission(float commission);
+
+  void storeDCAPortfolio(String portfolioName, List<DCAPortfolios> stockList) throws IOException;
+
+  ArrayList<String> getDCAPortfolioNames();
+
+  List<DCAPortfolios> displayDCAPortfolio(String portfolioName) throws IOException;
 }

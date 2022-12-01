@@ -1,6 +1,6 @@
 package stock.stock;
 
-public interface DCGPortfolios {
+public interface DCAPortfolios {
 
     /**
      * Returns the Quantity of the stock.
@@ -14,6 +14,13 @@ public interface DCGPortfolios {
      * @param percentage updated quantity of stock units.
      */
     void setPercentage(float percentage);
+
+    /**
+     * Returns the Quantity of the stock.
+     *
+     * @return an integer showing number of particular stock bought.
+     */
+    float getQuantity();
 
     /**
      * Returns the symbol of the stock.

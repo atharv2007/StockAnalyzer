@@ -1,5 +1,7 @@
 package stock.model;
 
+import stock.stock.DCAImpl;
+import stock.stock.DCAPortfolios;
 import stock.stock.stockDetails;
 import stock.stock.StockInterface;
 
@@ -47,7 +49,7 @@ public class StockModel implements ModelInterface {
   @Override
   public ArrayList<String> getPortfolioNames() {
     Path currentPath = Paths.get(System.getProperty("user.dir"));
-    Path fp = Paths.get(currentPath.toString(), "allPortfolios");
+    Path fp = Paths.get(currentPath.toString(), "allPortfolios/flexPortfolios");
     File theDir = new File(fp.toString());
     if (!theDir.exists()) {
       theDir.mkdirs();
@@ -58,6 +60,57 @@ public class StockModel implements ModelInterface {
     return new ArrayList<>(Arrays.asList(stringListFiles));
   }
 
+  @Override
+  public ArrayList<String> getDCAPortfolioNames() {
+    Path currentPath = Paths.get(System.getProperty("user.dir"));
+    Path fp = Paths.get(currentPath.toString(), "allPortfolios/DCAPortfolios");
+    File theDir = new File(fp.toString());
+    if (!theDir.exists()) {
+      theDir.mkdirs();
+    }
+    File directoryPath = new File(fp.toString());
+    String[] stringListFiles = directoryPath.list();
+
+    return new ArrayList<>(Arrays.asList(stringListFiles));
+  }
+
+  @Override
+  public List<DCAPortfolios> displayDCAPortfolio(String portfolioName) throws IOException {
+    Path currPath = Paths.get(userDirectory.toString()+"/DCAPortfolios", portfolioName);
+    File currFile = new File(currPath.toString());
+    if (!validFile(currFile)) {
+      throw new IOException("Invalid File");
+    }
+    String currLine;
+    List<DCAPortfolios> stockList = new ArrayList<>();
+    FileReader reader = new FileReader(currFile);
+    BufferedReader bufferedReader = new BufferedReader(reader);
+    while ((currLine = bufferedReader.readLine()) != null) {
+      String[] data = currLine.split(",");
+      if (data.length > 6) {
+        throw new IOException("Invalid CSV file");
+      } else {
+        if (!validSymbol(data[0])) {
+          throw new IOException("Invalid Symbol in CSV");
+        } else if (!validFloatQuantity(data[1])) {
+          throw new IOException("Invalid Quantity in CSV");
+        }
+        stockList.add(new DCAImpl(data[1],Float.parseFloat(data[1]), Float.parseFloat(data[5]), data[2],
+                Float.parseFloat(data[3]), Float.parseFloat(data[4])));
+      }
+    }
+    bufferedReader.close();
+    return stockList;
+
+  }
+
+  private boolean validFloatQuantity(String quantity) {
+    float quantity2 = Float.parseFloat(quantity);
+    if(quantity2 <= 0) {
+      return false;
+    }
+    return true;
+  }
   @Override
   public void createStock(String ticker, int share, String date, float purchaseCost)
           throws IOException {
@@ -271,7 +324,7 @@ public class StockModel implements ModelInterface {
   }
 
   private void createPortfolio(String portfolioName) throws IOException {
-    Path filePath = Paths.get(userDirectory.toString(), portfolioName + ".csv");
+    Path filePath = Paths.get(userDirectory.toString()+"/flexPortfolios", portfolioName + ".csv");
     File portfolioFile = new File(filePath.toString());
     if (portfolioFile.exists()) {
       throw new FileAlreadyExistsException("Portfolio already exists");
@@ -288,7 +341,7 @@ public class StockModel implements ModelInterface {
 
   @Override
   public List<StockInterface> displayPortfolio(String portfolioName) throws IOException {
-    Path currPath = Paths.get(userDirectory.toString(), portfolioName);
+    Path currPath = Paths.get(userDirectory.toString()+"/flexPortfolios", portfolioName);
     File currFile = new File(currPath.toString());
     return readFile(currFile);
   }
@@ -395,7 +448,7 @@ public class StockModel implements ModelInterface {
   @Override
   public float getInvestedValue(String portfolioName, float sum) throws IOException {
     String currLine;
-    Path currPath = Paths.get(userDirectory.toString(),portfolioName);
+    Path currPath = Paths.get(userDirectory.toString()+"/flexPortfolios",portfolioName);
     File currFile = new File(currPath.toString());
     FileReader reader = new FileReader(currFile);
     BufferedReader bufferedReader = new BufferedReader(reader);
@@ -426,7 +479,7 @@ public class StockModel implements ModelInterface {
       }
     }
 
-    Path filePath = Paths.get(userDirectory.toString(), portfolioName);
+    Path filePath = Paths.get(userDirectory.toString()+"/flexPortfolios", portfolioName);
     File portfolioFile = new File(filePath.toString());
     FileWriter writer = new FileWriter(portfolioFile);
     BufferedWriter bufferWriter = new BufferedWriter(writer);
@@ -452,7 +505,7 @@ public class StockModel implements ModelInterface {
         stock.setQuantity(availableQuantity);
       }
     }
-    Path filePath = Paths.get(userDirectory.toString(), portfolioName);
+    Path filePath = Paths.get(userDirectory.toString()+"/flexPortfolios", portfolioName);
     File portfolioFile = new File(filePath.toString());
     FileWriter writer = new FileWriter(portfolioFile);
     BufferedWriter bufferWriter = new BufferedWriter(writer);
@@ -468,7 +521,7 @@ public class StockModel implements ModelInterface {
 
   @Override
   public void purchaseStock(String portfolioName, List<StockInterface> stockList) throws IOException {
-    Path currPath = Paths.get(userDirectory.toString(), portfolioName);
+    Path currPath = Paths.get(userDirectory.toString()+"/flexPortfolios", portfolioName);
     File currFile = new File(currPath.toString());
     List<StockInterface> portfolioList = readFile(currFile);
     List<StockInterface> temp = new ArrayList<>();
@@ -476,14 +529,14 @@ public class StockModel implements ModelInterface {
 
     for (StockInterface stock1 : portfolioList){
       for(StockInterface stock2 : stockList){
-        if(stock1.getSymbol().equalsIgnoreCase(stock2.getSymbol()) &&
-           stock1.getDate().equalsIgnoreCase(stock2.getDate())) {
-
-          stock1.setQuantity(stock1.getQuantity() + stock2.getQuantity());
-        } else {
-          temp.add(stock2); //to store non-duplicate stock objects.
-          //these are added to the Portfolio in the outermost "for."
-          temp1.add(stock2);
+        if(stock1.getSymbol().equalsIgnoreCase(stock2.getSymbol())) {
+          if (stock1.getDate().equals(stock2.getDate())) {
+            stock1.setQuantity(stock1.getQuantity() + stock2.getQuantity());
+            temp1.add(stock2);
+          } else {
+            temp.add(stock2); //to store non-duplicate stock objects.
+            //these are added to the Portfolio in the outermost "for."
+          }
         }
       }
       for(StockInterface stock3 : temp1){
@@ -543,6 +596,43 @@ public class StockModel implements ModelInterface {
   @Override
   public boolean validCommission(float commission) {
     return commission < 0;
+  }
+
+  @Override
+  public void storeDCAPortfolio(String portfolioName, List<DCAPortfolios> stockList) throws IOException {
+    verifyName(portfolioName);
+    Path filePath = Paths.get(userDirectory.toString()+"/DCAPortfolios", portfolioName + ".csv");
+    File fileName = new File(filePath.toString());
+    boolean check = createDCAPortfolio(portfolioName);
+    if(check){
+      FileWriter writer = new FileWriter(fileName, true);
+      BufferedWriter bufferWriter = new BufferedWriter(writer);
+      for (DCAPortfolios stock : stockList) {
+        float quantity = stock.getQuantity();
+        String symbol = stock.getSymbol();
+        String date = stock.getDate();
+        float percentage = stock.getPercentage();
+        float purchaseCost = stock.getPurchaseCost();
+        float investedAmount = stock.getInvestedAmount();
+        bufferWriter.write(symbol + "," + quantity + "," + date + "," + purchaseCost + "," + investedAmount
+                + "," + percentage + '\n');
+      }
+      bufferWriter.close();
+    }
+    else {
+      throw new FileAlreadyExistsException("Portfolio already exists");
+    }
+  }
+
+  private boolean createDCAPortfolio(String portfolioName) throws FileAlreadyExistsException {
+    Path filePath = Paths.get(userDirectory.toString()+"/DCAPortfolios", portfolioName + ".csv");
+    File portfolioFile = new File(filePath.toString());
+    if (portfolioFile.exists()) {
+      return false;
+    }
+    else {
+      return true;
+    }
   }
 
   @Override
@@ -640,13 +730,13 @@ public class StockModel implements ModelInterface {
       count++;
     }
     Path currentPath = Paths.get(System.getProperty("user.dir"));
-    Path fp = Paths.get(currentPath.toString(), "allPortfolios");
+    Path fp = Paths.get(currentPath.toString(), "allPortfolios/flexPortfolios");
     File theDir = new File(fp.toString());
     if (!theDir.exists()) {
       theDir.mkdirs();
     }
 
-    Path filePath = Paths.get(currentPath.toString(), "allPortfolios", portfolioName + ".csv");
+    Path filePath = Paths.get(currentPath.toString(), "allPortfolios/flexPortfolios", portfolioName + ".csv");
 
     String fileName = filePath.toString();
 
@@ -676,12 +766,12 @@ public class StockModel implements ModelInterface {
     String fileName = "";
     if (!b) {
       Path currentPath = Paths.get(System.getProperty("user.dir"));
-      Path fp = Paths.get(currentPath.toString(), "allPortfolios");
+      Path fp = Paths.get(currentPath.toString(), "allPortfolios/flexPortfolios");
       File theDir = new File(fp.toString());
       if (!theDir.exists()) {
         theDir.mkdirs();
       }
-      Path filePath = Paths.get(currentPath.toString(), "allPortfolios", portfolioName + ".csv");
+      Path filePath = Paths.get(currentPath.toString(), "allPortfolios/flexPortfolios", portfolioName + ".csv");
 
       fileName = filePath.toString();
     } else {
@@ -712,7 +802,7 @@ public class StockModel implements ModelInterface {
 
     for (int i = 0; i < stockList.size(); i++) {
       StockInterface currStock = stockList.get(i);
-      if (currStock.getSymbol().equals(symbol) && currStock.getPurchaseCost()==purchaseCost) {
+      if (currStock.getSymbol().equals(symbol) && currStock.getDate()==date) {
         int currQuantity = currStock.getQuantity();
         stockList.set(i, new stockDetails(symbol, currQuantity + quantity, date,purchaseCost,
                 (currQuantity + quantity)*purchaseCost));
